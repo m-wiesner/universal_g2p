@@ -112,7 +112,7 @@ echo "---------------------------------"
 ###############################################################################
 # Run this first 
 if [ $stage -le 1 ]; then
-  $cmd ITER=1:$num_trains $owords/log/run.ITER.log \
+  $cmd ITER=1:$num_trials $owords/log/run.ITER.log \
     python local/g2p_selection/g2p/select_g2p.py --n-order $n_order \
                                    --constraint $constraint \
                                    --subset-method $method \
