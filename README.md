@@ -4,7 +4,7 @@ This repo provides tools for generating pronunciations from words in a new
 language and evaluating the quality of the induced pronunciation lexicon (w/r
 to a reference).  
 
-##Software Requirements
+## Software Requirements
 1. Phonetisaurus.
 2. srilm (ngram-count)
 
@@ -26,7 +26,7 @@ Then go to ${KALDI_PATH}/tools and run ...
 Otherwise I included my own installations in path.sh that you can use. Just
 comment (in/out) the appropriate lines in path.sh
 
-##Example Experiment
+## Example Experiment
 First link some kaldi stuff ..
 
 ln -s ../../wsj/s5/{steps,utils} . 
