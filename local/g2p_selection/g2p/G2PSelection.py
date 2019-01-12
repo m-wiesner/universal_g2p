@@ -1,9 +1,8 @@
 from __future__ import print_function
 import numpy as np
-from Queue import PriorityQueue, Empty
+from Queue import PriorityQueue, Queue, Empty
 from collections import deque
 import sys
-
 
 MAX_VALUE=999999999.0
 
@@ -62,7 +61,6 @@ class BatchActiveSubset(object):
             assert gain >= 0, "ERROR: Expected gain >= 0" 
             if self.cost_select:
                 gain /= self.cost(self.test_wordlist[idx])
-          
             # This is for the case when idx is the last element 
             try: 
                 max_val, idx_max = upper_bounds.get(False)
@@ -100,18 +98,22 @@ class RandomSubset(object):
     
     def run(self):
         ranked_words = []
-        V_minus_S = [w for w in self.test_wordlist if self.cost(w) <= self.budget]
+        V_minus_S = [] 
+        for i in np.random.choice(range(len(self.test_wordlist)), size=len(self.test_wordlist), replace=False):
+            w = self.test_wordlist[i]
+            if (self.cost(w) <= self.budget):
+                V_minus_S.append((self.cost(w), w))
         total_cost = 0.0
+        remaining_budget = self.budget
         
         while total_cost < self.budget and len(V_minus_S) > 0:
-            w_star = V_minus_S.pop(np.random.randint(len(V_minus_S)))
-            ranked_words.append(w_star)
-            total_cost += self.cost(w_star)
-            print(w_star.encode('utf-8'), "Consumed: ", total_cost, "/", self.budget, ": + ", self.cost(w_star), end=" : ")
-            
-            remaining_budget = self.budget - total_cost
-            V_minus_S = [w for w in V_minus_S if self.cost(w) <= remaining_budget]
-            print("Remaining Candidates: ", len(V_minus_S))
+            cost_w_star, w_star = V_minus_S.pop()
+            if cost_w_star <= remaining_budget: 
+                ranked_words.append(w_star)
+                total_cost += cost_w_star
+                print(w_star.encode('utf-8'), "Consumed: ", total_cost, "/", self.budget, ": + ", cost_w_star, end=" : ")
+                remaining_budget = self.budget - total_cost
+                print("Remaining Candidates: ", len(V_minus_S))
             
         return ranked_words
     

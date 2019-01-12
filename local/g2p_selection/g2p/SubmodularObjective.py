@@ -10,7 +10,8 @@ from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 # Base method
 class FeatureObjective(object):
     def __init__(self, wordlist, test_wordlist=None, n_order=4,
-                append_ngrams=True, binarize_counts=False):
+                append_ngrams=True, binarize_counts=False,
+                g=np.sqrt, vectorizer='count'):
         self.wordlist = wordlist
         if not test_wordlist:
             self.test_wordlist = wordlist
@@ -23,8 +24,11 @@ class FeatureObjective(object):
         self.append_ngrams = append_ngrams
         self.binarize_counts = binarize_counts
         
-        self.vectorizer = CountVectorizer
-        
+        if vectorizer == 'count':
+            self.vectorizer = CountVectorizer
+        else:
+            self.vectorizer = TfidfVectorizer
+
         self.word_features = None
         self.subset = None
         self.p = None
@@ -94,9 +98,15 @@ class FeatureCoverageObjective(FeatureObjective):
     def get_word_features(self):
         self.word_features = self._ngram_vectorizer.transform(self.test_wordlist)
         self.word_features[self.word_features > 0 ] = 1.0
-        self.total_counts = self.word_features.sum(axis=0)
-        self.p = self.total_counts / float(self.word_features.sum())
-        self.K = self.total_counts.sum()
+        test_word_counts = self.word_features.sum(axis=0)
+        
+        train_word_features = self._ngram_vectorizer.transform(self.wordlist)
+        train_word_features[train_word_features > 0] = 1.0
+        self.total_counts = train_word_features.sum(axis=0)
+        
+        self.p = self.total_counts / float(train_word_features.sum())
+        self.total_counts = (test_word_counts.sum() / self.total_counts.sum()) * self.total_counts
+        self.K = test_word_counts.sum()
 
 
     def run(self, idx_new):
@@ -104,5 +114,4 @@ class FeatureCoverageObjective(FeatureObjective):
         p_vec = np.squeeze(np.asarray(self.total_counts))
         vec = np.squeeze(np.asarray(vec))
         return self.K - np.multiply(p_vec, (1.0 / (8.0 ** vec))).sum()
-
 

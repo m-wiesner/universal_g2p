@@ -29,7 +29,7 @@
 ./local/run_g2p_selection.sh --cmd "queue.pl" \
                              --num-trials 20 \
                              --constraint card \
-                             --intervals "100 200 400 500" \
+                             --intervals "100 200 400 800 1600 3200 6400 12800 20000 25600 36000 50000 86282" \
                              --vectorizer count \
                              --objective FeatureCoverage \
                              --method Random \
@@ -40,7 +40,7 @@
                              --select-words words_roman.txt \
                              --test-words SPA_words.txt \
                              --test-ref-lexicon /export/b09/mwiesner/LORELEI/tasks/process_set0/set0/local/lexicons/Spanish \
-                             SPNBDA_random_roman_selection words_roman.txt lexicon_roman.txt 500
+                             SPNBDA_random_roman_selection words_roman.txt lexicon_roman.txt 86282
 
 # Batch Active Selection                             
 #./local/run_g2p_selection.sh --cmd "queue.pl" \
@@ -57,5 +57,5 @@
 #                             --select-words words_roman.txt \
 #                             --test-words SPA_words.txt \
 #                             --test-ref-lexicon /export/b09/mwiesner/LORELEI/tasks/process_set0/set0/local/lexicons/Spanish \
-#                             SPNBDA_random_roman_selection words_SPNBDA_allowed.txt lexicon_roman.txt 50000
+#                             SPNBDA_batchactive_roman_selection words_SPNBDA_allowed.txt lexicon_roman.txt 50000
 

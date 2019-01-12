@@ -120,7 +120,6 @@ if [ $stage -le 1 ]; then
                                    $extra_opts \
                                    $owords/trial.ITER/words.txt $words $budget || exit 1;
 fi
-
 ###############################################################################
 #  Get pronunciations for all words in each g2p selection produced in stage=1
 ###############################################################################
