@@ -15,6 +15,7 @@ append_ngrams=true # Use all order < n, n-grams as features in addition to all o
 binarize_counts=true # For BatchActive selection, a single feature is not counted twice within a single word
 intervals="100 200 400 800 1600 3200 6400 12800 20000 25600 36000 50000" # Selection intervals
 score=true # To score or not score
+optimal_only=true
 
 ###############################################################################
 # The below options are more useful for the Universal G2P Experiments
@@ -123,6 +124,10 @@ fi
 ###############################################################################
 #  Get pronunciations for all words in each g2p selection produced in stage=1
 ###############################################################################
+if [[ $method = "BatchActive" ]] && $optimal_only; then
+  intervals=`cat ${owords}/trial.1/words.kl_div.txt | wc -l` 
+fi
+
 if [ $stage -le 2 ]; then
   # Next run the following
   for num in ${intervals[@]}; do
@@ -170,7 +175,7 @@ if [ $stage -le 3 ]; then
     rm -r ${odir}/g2p
   fi
   
-  ./local/g2p_selection/run_all_budgets.sh --cmd "queue.pl" --ref-lex $test_ref_lexicon \
+  ./local/g2p_selection/run_all_budgets.sh --cmd ${cmd} --ref-lex $test_ref_lexicon \
                              --words $test_words --score $score $odir
 
   # The --words option is to specify which set of tested words should be scored
@@ -178,8 +183,17 @@ if [ $stage -le 3 ]; then
   # to specify which set of experiments should be scored we use the --words opt
   if $score; then
     ./local/g2p_selection/run_average_ser.sh ${extra_scoring_opts} --words $test_words_name $odir
+    
+    ## I use this for plotting only. Safe to ignore for now
+    #find ${odir} -type d -name "budget_*" | awk -F'_' '{print $NF}' |\
+    # sort -n > ${odir}/trial_results.txt
+    #
+    #for i in `seq 1 ${num_trials}`; do
+    #  grep "/trial\.${i}/" ${odir}/budget_*/symb_er.txt |\
+    #    sort -t'_' -n -k5,5 |\
+    #    paste -d' ' ${odir}/trial_results.txt <(cut -d' ' -f2-) > ${odir}/trial_results.tmp
+    #  mv ${odir}/trial_results.tmp ${odir}/trial_results.txt; done 
   fi
 fi
-
 
 exit 0;

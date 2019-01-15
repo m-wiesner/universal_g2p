@@ -40,7 +40,6 @@ mkdir -p ${dir}/g2p/log
 
 for i in `seq 1 $num_trials`; do
   trial=`readlink -f ${trials[$(($i-1))]}`
-  echo $trial 
   cd ${dir}/g2p
   if [ ! -L trial.$i ] || [ ! -e trial.$i ]; then
     if [ -L trial.$i ]; then

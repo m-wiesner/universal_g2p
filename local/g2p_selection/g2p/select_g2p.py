@@ -118,6 +118,7 @@ def main():
         test_words = words 
 
 
+    # The submodular objective
     fobj = objectives[args.objective](
         words,
         test_wordlist=test_words,
@@ -125,11 +126,8 @@ def main():
         append_ngrams=args.append_ngrams,
         binarize_counts=args.binarize_counts
     )
-    
-    # Store experiment configurations
-    #with codecs.open(args.output + ".conf", "w", encoding="utf-8") as f:
-    #    json.dump(args, f, indent=4)
-     
+         
+    # The selection method
     bas = methods[args.subset_method](
         fobj,
         args.budget,
@@ -141,14 +139,27 @@ def main():
     print("Begin Selection ...")
     selected_words = bas.run_lazy()
     
+    # Create output directory if necessary
     if os.path.dirname(args.output) not in ('', '.'):
         if not os.path.exists(os.path.dirname(args.output)):
             os.makedirs(os.path.dirname(args.output))
     
+    oname, oext = os.path.splitext(args.output)
+
+    # Store experiment configurations
+    #with codecs.open(oname + ".conf", "w", encoding="utf-8") as f:
+    #    json.dump(args, f, indent=4)
+
+    # Return the words in the order selected up to the specified budget
     with codecs.open(args.output, "w", encoding="utf-8") as f:
         for w in selected_words:
             print(w, file=f) 
-  
+   
+    # Returns "optimal" subset according to KL-divergence 
+    if args.subset_method == 'BatchActive':
+        with codecs.open(oname + '.kl_div' + oext, "w", encoding="utf-8") as f:
+            for w in selected_words[0: np.argmin(bas.KL) + 1]:
+                print(w, file=f) 
      
 if __name__ == "__main__":
     main() 
