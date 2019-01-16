@@ -157,7 +157,7 @@ class FeatureObjective(object):
         return -(np.multiply(prob_vec, np.log2(prob_vec + sys.float_info.epsilon))).sum()
 
 
-    def compute_kl(self, lam=1.0):
+    def compute_kl(self, lam=0.001):
         '''
             Compute the KL-Divergence between the feature distribution induced
             by the currently selected subset and the empirical distribution of
