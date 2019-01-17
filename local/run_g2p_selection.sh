@@ -184,15 +184,15 @@ if [ $stage -le 3 ]; then
   if $score; then
     ./local/g2p_selection/run_average_ser.sh ${extra_scoring_opts} --words $test_words_name $odir
     
-    ## I use this for plotting only. Safe to ignore for now
-    #find ${odir} -type d -name "budget_*" | awk -F'_' '{print $NF}' |\
-    # sort -n > ${odir}/trial_results.txt
-    #
-    #for i in `seq 1 ${num_trials}`; do
-    #  grep "/trial\.${i}/" ${odir}/budget_*/symb_er.txt |\
-    #    sort -t'_' -n -k5,5 |\
-    #    paste -d' ' ${odir}/trial_results.txt <(cut -d' ' -f2-) > ${odir}/trial_results.tmp
-    #  mv ${odir}/trial_results.tmp ${odir}/trial_results.txt; done 
+    # I use this for plotting only. Safe to ignore for now
+    find ${odir} -type d -name "budget_*" | awk -F'_' '{print $NF}' |\
+     sort -n > ${odir}/trial_results.txt
+    
+    for i in `seq 1 ${num_trials}`; do
+      grep "/trial\.${i}/" ${odir}/budget_*/symb_er.txt |\
+        sort -t'_' -n -k5,5 |\
+        paste -d' ' ${odir}/trial_results.txt <(cut -d' ' -f2-) > ${odir}/trial_results.tmp
+      mv ${odir}/trial_results.tmp ${odir}/trial_results.txt; done 
   fi
 fi
 
