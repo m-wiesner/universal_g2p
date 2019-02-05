@@ -7,6 +7,7 @@ import os
 import json
 from G2PSelection import BatchActiveSubset, RandomSubset
 from SubmodularObjective import FeatureObjective, FeatureCoverageObjective
+import pdb
 
 def parse_input():
     parser = argparse.ArgumentParser()
@@ -99,6 +100,7 @@ def main():
     
     fobj.set_subset([])
     word_map = {w: i for i, w in enumerate(test_words)}
+    pdb.set_trace()
     KL = []
     for w in owords:
         fobj.add_to_subset(word_map[w])

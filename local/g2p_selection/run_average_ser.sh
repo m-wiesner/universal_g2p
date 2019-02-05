@@ -15,27 +15,18 @@ for b in ${budgets[@]}; do
 done
 
 if $random; then
-  cat <(echo "budget str_er str_er_stdev F1 F1_stdev Prec Prec_stdev Recall Recall_stdev symb_er symb_er_stdev") \
+  cat <(echo "budget str_er str_er_stdev symb_er symb_er_stdev") \
       <(paste -d' ' <(for b in ${budgets[@]}; do echo ${b##*_}; done | sort -n) \
               <(grep "${words}Avg:" ${dir}/budget_*/str_er.txt | sed 's/budget_/budget=/' | sort -t'=' -n -k2 | awk '{print $2}') \
               <(grep "${words}Stdev:" ${dir}/budget_*/str_er.txt | sed 's/budget_/budget=/' | sort -t'=' -n -k2 | awk '{print $2}') \
-              <(grep "${words}Avg:" ${dir}/budget_*/F1.txt | sed 's/budget_/budget=/' | sort -t'=' -n -k2 | awk '{print $2}') \
-              <(grep "${words}Stdev:" ${dir}/budget_*/F1.txt | sed 's/budget_/budget=/' | sort -t'=' -n -k2 | awk '{print $2}') \
-              <(grep "${words}Avg:" ${dir}/budget_*/Prec.txt | sed 's/budget_/budget=/' | sort -t'=' -n -k2 | awk '{print $2}') \
-              <(grep "${words}Stdev:" ${dir}/budget_*/Prec.txt | sed 's/budget_/budget=/' | sort -t'=' -n -k2 | awk '{print $2}') \
-              <(grep "${words}Avg:" ${dir}/budget_*/Recall.txt | sed 's/budget_/budget=/' | sort -t'=' -n -k2 | awk '{print $2}') \
-              <(grep "${words}Stdev:" ${dir}/budget_*/Recall.txt | sed 's/budget_/budget=/' | sort -t'=' -n -k2 | awk '{print $2}') \
               <(grep "${words}Avg:" ${dir}/budget_*/symb_er.txt | sed 's/budget_/budget=/' | sort -t'=' -n -k2 | awk '{print $2}') \
               <(grep "${words}Stdev:" ${dir}/budget_*/symb_er.txt | sed 's/budget_/budget=/' | sort -t'=' -n -k2 | awk '{print $2}')) \
               > ${dir}/stats.${words}.txt
   
 else
-  cat <(echo "budget str_er F1 Prec Recall symb_er") \
+  cat <(echo "budget str_er symb_er") \
       <(paste -d' ' <(for b in ${budgets[@]}; do echo ${b##*_}; done | sort -n) \
               <(grep "${words}Avg:" ${dir}/budget_*/str_er.txt | sed 's/budget_/budget=/' | sort -t'=' -n -k2 | awk '{print $2}') \
-              <(grep "${words}Avg:" ${dir}/budget_*/F1.txt | sed 's/budget_/budget=/' | sort -t'=' -n -k2 | awk '{print $2}') \
-              <(grep "${words}Avg:" ${dir}/budget_*/Prec.txt | sed 's/budget_/budget=/' | sort -t'=' -n -k2 | awk '{print $2}') \
-              <(grep "${words}Avg:" ${dir}/budget_*/Recall.txt | sed 's/budget_/budget=/' | sort -t'=' -n -k2 | awk '{print $2}') \
               <(grep "${words}Avg:" ${dir}/budget_*/symb_er.txt | sed 's/budget_/budget=/' | sort -t'=' -n -k2 | awk '{print $2}')) \
               > ${dir}/stats.${words}.txt
 fi

@@ -44,4 +44,3 @@ if [ $constraint == "len" ]; then
     }' $lexicon $words
 fi
 
-

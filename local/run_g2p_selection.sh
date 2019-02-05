@@ -15,7 +15,7 @@ append_ngrams=true # Use all order < n, n-grams as features in addition to all o
 binarize_counts=true # For BatchActive selection, a single feature is not counted twice within a single word
 intervals="100 200 400 800 1600 3200 6400 12800 20000 25600 36000 50000" # Selection intervals
 score=true # To score or not score
-optimal_only=true
+optimal_only=false
 
 ###############################################################################
 # The below options are more useful for the Universal G2P Experiments
@@ -146,6 +146,9 @@ if [ $stage -le 2 ]; then
     run.pl ITER=1:$num_trials $num_dir/trial.ITER/log/lexicon_retrieve.log \
       python ./local/translit_oov_letters.py $test_words ${num_dir}/trial.ITER/lexicon.orig.transform.tmp \> ${num_dir}/trial.ITER/lexicon.orig.transform
 
+    for d in ${num_dir}/trial.*; do
+      echo ${num} > ${d}/budget
+    done
   done
 fi
 
@@ -184,13 +187,13 @@ if [ $stage -le 3 ]; then
   if $score; then
     ./local/g2p_selection/run_average_ser.sh ${extra_scoring_opts} --words $test_words_name $odir
     
-    # I use this for plotting only. Safe to ignore for now
+    # I use this for plotting random trials only. Safe to ignore for now
     find ${odir} -type d -name "budget_*" | awk -F'_' '{print $NF}' |\
-     sort -n > ${odir}/trial_results.txt
+      sort -n > ${odir}/trial_results.txt
     
     for i in `seq 1 ${num_trials}`; do
       grep "/trial\.${i}/" ${odir}/budget_*/symb_er.txt |\
-        sort -t'_' -n -k5,5 |\
+        sort -t'_' -n -k4,4 |\
         paste -d' ' ${odir}/trial_results.txt <(cut -d' ' -f2-) > ${odir}/trial_results.tmp
       mv ${odir}/trial_results.tmp ${odir}/trial_results.txt; done 
   fi
