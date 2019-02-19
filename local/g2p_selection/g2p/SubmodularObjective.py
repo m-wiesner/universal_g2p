@@ -35,11 +35,11 @@ class FeatureObjective(object):
                                 type: bool
                                 description: Count any given ngram once per word
                                 default: False
-                            g
+                           g
                                 type: func
                                 description: The submodular function to use
                                 default: np.sqrt
-                            vectorizer
+                           vectorizer
                                 type: str
                                 description: Weight applied to ngram counts (tfidf or count)
                                 default: 'count'
@@ -55,7 +55,7 @@ class FeatureObjective(object):
         else:
             self.test_wordlist = test_wordlist
         
-
+        self._g = g
         self._ngram_vectorizer = None
         
         self.n_order = n_order

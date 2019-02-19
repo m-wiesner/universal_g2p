@@ -24,11 +24,11 @@ optimal_only=false
 test_words= # Words whose pronunciation we will derive from g2p
 test_ref_lexicon= # The reference lexicon corresponding to the test_words
 select_words= # Word list from which to select in order to train g2p 
-select_lexicon= # Words an assosiated pronunciation from which we will select
+select_lexicon= # Words and assosiated pronunciation from which we will select
 
 . ./utils/parse_options.sh
 if [ $# -eq 0 ]; then
-  echo "Usage: ./local/run_g2p_rand_select.sh [opts] <odir> <words> <lexicon> <budget>"
+  echo "Usage: ./local/run_g2p_selection.sh [opts] <odir> <words> <lexicon> <budget>"
   echo "    [opts] --n-order : max n-gram order for bow features"
   echo "           --num_trials : number of random trials to perform"
   echo "           --constraint : the type of budget constraint ['card', 'freq', 'len', 'rootlen']" 
@@ -76,6 +76,7 @@ if $binarize_counts; then
 fi
 if [ ! -z $select_words ]; then
   extra_opts="$extra_opts --test-wordlist $select_words"
+  echo "select_words $select_words"
 fi
 
 # Check $num_trials
@@ -113,13 +114,15 @@ echo "---------------------------------"
 ###############################################################################
 # Run this first 
 if [ $stage -le 1 ]; then
-  $cmd ITER=1:$num_trials $owords/log/run.ITER.log \
+    select_g2p_cmd="$cmd ITER=1:$num_trials $owords/log/run.ITER.log \
     python local/g2p_selection/g2p/select_g2p.py --n-order $n_order \
                                    --constraint $constraint \
                                    --subset-method $method \
                                    --objective $objective \
                                    $extra_opts \
-                                   $owords/trial.ITER/words.txt $words $budget || exit 1;
+                                   $owords/trial.ITER/words.txt $words $budget || exit 1"
+    echo $select_g2p_cmd
+    $select_g2p_cmd
 fi
 ###############################################################################
 #  Get pronunciations for all words in each g2p selection produced in stage=1

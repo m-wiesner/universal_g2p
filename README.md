@@ -9,14 +9,15 @@ to a reference).
 2. srilm (ngram-count)
 
 You can install these very easily with kaldi. So these experiments should be
-run in a new example directory inside a kaldi installation, such as what is
+run in a new example directory inside a kaldi installation
+(for example: kaldi/egs/universal_g2p/universal_g2p), such as what is
 installed in ESPNET.
 
 Copy this file ...
 
 /export/b14/mwiesner/JSALT_07_25_2018/espnet/tools/kaldi_github/tools/srilm.tgz
 
-to ${KADLI_PATH}/tools/ 
+to ${KALDI_PATH}/tools/
 
 Then go to ${KALDI_PATH}/tools and run ...
 
@@ -34,7 +35,8 @@ ln -s ../../wsj/s5/{steps,utils} .
 Relevant Files
 -------------------------------------------------------------------------------
 For an example experiment, use the provided files:
-  1. SPA_words.txt     -- small list of test words for Spanish.
+  1. SPA_words.txt     -- small list of test words for Spanish, scraped from
+  Wiktionary. SPA_lexicon.txt includes pronunciations.
 
   2. lexicon_roman.txt -- pooled pronunciation lexicon of all BABEL langauges
                           with Latin orthography.
@@ -42,7 +44,7 @@ For an example experiment, use the provided files:
   3. words_roman.txt   -- list of all candidate words from which to select G2P
                           training set.
   
-  4. words_SPNBDA_allowed.txt -- list of words without weird puntuation from
+  4. words_SPNBDA_allowed.txt -- list of words without weird punctuation from
                                  which to derive n-gram features used in 
                                  Batch Active Selection.
 
@@ -57,6 +59,10 @@ The main script that runs this experiment is:
   ./local/run_g2p_selection.sh
 
 This is worth looking at for more information about optional arguments especially.
+
+An example command:
+
+./local/run_g2p_selection.sh --n-order 4 --append-ngrams false --constraint len --select-words words_roman.txt --select-lexicon lexicon_roman.txt --test-words SPA_words.txt --test-ref-lexicon SPA_lexicon.txt odir SPA_words.txt lexicon_roman.txt 1000 --select-words words_roman.txt
 
 More information
 -------------------------------------------------------------------------------
