@@ -4,7 +4,7 @@
 
 nbest=1
 score=true
-phon2phon=/export/b14/mwiesner/JSALT_07_25_2018/espnet/tools/kaldi_github/egs/universal_g2p/phon2phon/ipa.bitdist.table
+phon2phon=$PHON2PHON_PATH #/export/b13/mwiesner/JSALT_07_25_2018/espnet/tools/kaldi_github/egs/universal_g2p/phon2phon/ipa.bitdist.table
 
 . ./utils/parse_options.sh
 

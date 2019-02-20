@@ -123,6 +123,7 @@ if [ $stage -le 1 ]; then
                                    $owords/trial.ITER/words.txt $words $budget || exit 1"
     echo $select_g2p_cmd
     $select_g2p_cmd
+
 fi
 ###############################################################################
 #  Get pronunciations for all words in each g2p selection produced in stage=1
