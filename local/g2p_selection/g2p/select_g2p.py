@@ -7,6 +7,7 @@ import os
 import json
 from G2PSelection import BatchActiveSubset, RandomSubset
 from SubmodularObjective import FeatureObjective, FeatureCoverageObjective
+from SubmodularObjective import PhonemeFeatureCoverageObjective
 
 
 def parse_input():
@@ -37,7 +38,7 @@ def parse_input():
         action="store")
     parser.add_argument("--objective",
         help="The submodular objective used",
-        choices=['Feature', 'FeatureCoverage'],
+        choices=['Feature', 'FeatureCoverage', 'PhonemeFeatureCoverage'],
         default="FeatureCoverage",
         action="store")
     parser.add_argument("--cost-select",
@@ -49,8 +50,14 @@ def parse_input():
     parser.add_argument("--binarize-counts",
         help="Counts are 0 or 1",
         action="store_true")
+    # TODO the naming of "test*" should change to select.
     parser.add_argument("--test-wordlist",
         help="Path with a list of words from which to select",
+        type=str,
+        default=None,
+        action="store")
+    parser.add_argument("--test-lexicon",
+        help="Path with a list of words (with pronunciations) from which to select",
         type=str,
         default=None,
         action="store")
@@ -106,6 +113,7 @@ def main():
     objectives = {
                     'Feature': FeatureObjective,
                     'FeatureCoverage': FeatureCoverageObjective,
+                    'PhonemeFeatureCoverage': PhonemeFeatureCoverageObjective,
                  }
 
     
@@ -117,15 +125,34 @@ def main():
     else:
         test_words = words 
 
+    if args.objective == "PhonemeFeatureCoverage":
+        assert args.test_lexicon
+        test_lexicon = []
+        with codecs.open(args.test_lexicon, "r", encoding="utf-8") as f:
+            for l in f:
+                word, pronunciation = l.split("\t")
+                test_lexicon.append((word, pronunciation.split()))
 
-    # The submodular objective
-    fobj = objectives[args.objective](
-        words,
-        test_wordlist=test_words,
-        n_order=args.n_order,
-        append_ngrams=args.append_ngrams,
-        binarize_counts=args.binarize_counts
-    )
+    if args.objective == "PhonemeFeatureCoverage":
+        # The submodular objective
+        fobj = objectives[args.objective](
+            words,
+            test_wordlist=test_words,
+            phoneme_wordlist=test_lexicon, #TODO naming incongruence
+            n_order=args.n_order,
+            append_ngrams=args.append_ngrams,
+            binarize_counts=args.binarize_counts
+        )
+    else:
+        # The submodular objective
+        fobj = objectives[args.objective](
+            words,
+            test_wordlist=test_words,
+            n_order=args.n_order,
+            append_ngrams=args.append_ngrams,
+            binarize_counts=args.binarize_counts,
+            phoneme_words=phoneme_words,
+        )
          
     # The selection method
     bas = methods[args.subset_method](
