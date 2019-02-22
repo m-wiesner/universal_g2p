@@ -137,21 +137,13 @@ class FeatureObjective(object):
             wordlist = self.wordlist
 
         self.word_features = self._ngram_vectorizer.transform(wordlist) 
-        print("wordlist:")
-        print(wordlist)
-        print("self.word_features:")
-        print(self.word_features)
         train_word_features = self._ngram_vectorizer.transform(self.wordlist)
-        print("self.train_word_features:")
-        print(train_word_features)
         
         if self.binarize_counts:
             train_word_features[train_word_features > 0] = 1.0
             self.word_features[self.word_features > 0 ] = 1.0
         
         self.total_counts = train_word_features.sum(axis=0)
-        print("len(total_counts):")
-        print(len(self.total_counts))
         self.p = self.total_counts / float(train_word_features.sum())
 
 
@@ -222,8 +214,6 @@ class PhonemeFeatureCoverageObjective(FeatureCoverageObjective):
                                     strip_accents='unicode',
                                     ngram_range=(1,1))
         phoneme_vectorizer.fit(self.phoneme_inventory)
-        print("feature names:")
-        print(phoneme_vectorizer.get_feature_names())
         self._phoneme_vectorizer = phoneme_vectorizer
 
     def get_word_features(self):
@@ -254,94 +244,43 @@ class PhonemeFeatureCoverageObjective(FeatureCoverageObjective):
         pronun_list = ["".join(pronunciation) for word, pronunciation
                                               in self.test_phoneme_wordlist]
         assert len(wordlist) == len(pronun_list)
-        print("pronun_list:")
-        print(pronun_list[:10])
 
         # self.word_features are the features for the words we are selecting
         # from ('test word features')
         self.word_features = self._ngram_vectorizer.transform(wordlist) 
-        print("wordlist:")
-        print(wordlist[:10])
-        print("self.word_features:")
-        print(self.word_features[:10])
         self.word_phoneme_features = self._phoneme_vectorizer.transform(pronun_list) 
-        print("self.word_phoneme_features:")
-        print(self.word_phoneme_features[:10])
         # Now append the two sparse matrices.
-        print("Appending")
-        print(self.word_features.shape)
-        print(self.word_phoneme_features.shape)
-        for word_i, word in enumerate(wordlist[:10]):
-            try:
-                print("Word: " + word)
-                print("\tngram features:")
-                print(self.word_features[word_i,:].toarray().squeeze())
-                for ngram_i, elem in enumerate(self.word_features[word_i,:].toarray().squeeze()):
-                    if elem > 0:
-                        print("\t\t" + self._ngram_vectorizer.get_feature_names()[ngram_i])
-            except UnicodeEncodeError:
-                pass
-            try:
-                print("Pronunciation: " + pronun_list[word_i])
-                print("\tngram features:")
-                print(self.word_phoneme_features[word_i,:].toarray().squeeze())
-                for ngram_i, elem in enumerate(self.word_phoneme_features[word_i,:].toarray().squeeze()):
-                    if elem > 0:
-                        print("\t\t" + self._phoneme_vectorizer.get_feature_names()[ngram_i])
-            except UnicodeEncodeError:
-                pass
         self.word_features = sparse.hstack((self.word_features,
                                             self.word_phoneme_features),
                                            format="csr")
-        print(self.word_features.shape)
 
 
         # train_word_features gets us our initial word features.
         train_word_features = self._ngram_vectorizer.transform(self.wordlist)
-        print("ngram features:")
-        print(self._ngram_vectorizer.get_feature_names())
-        print("self.train_word_features:")
-        print(train_word_features.shape)
-        # TODO We don't have train_word_features, so we'll have to fake them by
+
+        # We don't have train_word_features, so we'll have to fake them by
         # taking the phoneme inventory and scaling the frequency appropriately.
         # Then that train_word_phoneme_features variable will be
         # appended to train_word_features.
-        # train_word_phoneme_features = <get some scaled uniform features based
-        # on the phoneme inventory of the language>
+
+        # So first, we just take our whole phoneme inventory and make those
+        # fake features for each 'training' word.
         train_word_phoneme_features = self._phoneme_vectorizer.transform(
                 ["".join(self.phoneme_inventory)]*len(self.wordlist))
-        print("train_word_phoneme_features")
-        print("".join(self.phoneme_inventory))
-        print(train_word_phoneme_features.shape)
         # Now multiply the values of those feature counts so that they are
         # proportional to the length of the graphemic 'training' utterance.
-        print("ok")
-        print(self.wordlist[:10])
-        print(self.wordlist[0])
-        # TODO perhaps these features should be floating point
+        # TODO Scaling factors here are important it seems. I threw a 2 in the
+        # denominator to bias against phoneme inventory when using
+        # --append-ngrams false (ie. when only 4-grams are used for graphemes,
+        # phonemes become more important).
         for i in range(len(self.wordlist)):
-            train_word_phoneme_features[i,:] *= len(self.wordlist[i])/(2*len(self.phoneme_inventory))
+            train_word_phoneme_features[i,:] *= (
+                    len(self.wordlist[i])/(2*len(self.phoneme_inventory)))
 
-        print(train_word_phoneme_features[0,:])
-        print(train_word_phoneme_features[2,:]*(len(self.wordlist[2])/len(self.phoneme_inventory)))
-
-        print("type(self.word_features)")
-        print(type(self.word_features))
-
-        print("total word_features:")
-        print(train_word_features.sum().shape)
-        print(train_word_features.sum())
-
-        print("total word_phoneme_features:")
-        print(train_word_phoneme_features.sum().shape)
-        print(train_word_phoneme_features.sum())
         # Append the word_phoneme_features to word_features.
         train_word_features = sparse.hstack((train_word_features,
                                              train_word_phoneme_features),
                                             format="csr")
-
-        import sys; sys.exit()
-        
 
         if self.binarize_counts:
             train_word_features[train_word_features > 0] = 1.0
@@ -349,8 +288,6 @@ class PhonemeFeatureCoverageObjective(FeatureCoverageObjective):
             #self.word_phoneme_features[self.word_phoneme_features > 0 ] = 1.0
 
         self.total_counts = train_word_features.sum(axis=0)
-        print("len(total_counts):")
-        print(len(self.total_counts))
         self.p = self.total_counts / float(train_word_features.sum())
 
         # NOTE I've copy-pasted code a bit here. Above includes stuff from
