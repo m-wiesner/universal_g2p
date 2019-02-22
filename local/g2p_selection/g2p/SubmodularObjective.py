@@ -6,7 +6,6 @@ from scipy import stats
 import scipy.sparse as sparse
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 
-
 # Base method
 class FeatureObjective(object):
     '''
@@ -143,12 +142,16 @@ class FeatureObjective(object):
         print("self.word_features:")
         print(self.word_features)
         train_word_features = self._ngram_vectorizer.transform(self.wordlist)
+        print("self.train_word_features:")
+        print(train_word_features)
         
         if self.binarize_counts:
             train_word_features[train_word_features > 0] = 1.0
             self.word_features[self.word_features > 0 ] = 1.0
         
         self.total_counts = train_word_features.sum(axis=0)
+        print("len(total_counts):")
+        print(len(self.total_counts))
         self.p = self.total_counts / float(train_word_features.sum())
 
 
@@ -198,13 +201,12 @@ class PhonemeFeatureCoverageObjective(FeatureCoverageObjective):
     """ An extension of FeatureCoverageObjective that also includes phoneme
     features. """
     def __init__(self, *args, **kwargs):
-        super(PhonemeFeatureCoverageObjective, self).__init__(*args, **kwargs)
         self.phoneme_vectorizer = CountVectorizer
         #self.phoneme_inventory = kwargs["phoneme_inventory"]
         self.phoneme_inventory = ["a", "n"] #TODO replace with commented line above
         self.test_phoneme_wordlist = kwargs["phoneme_wordlist"]
         self.get_phoneme_vectorizer()
-        self.get_word_phoneme_features()
+        super(PhonemeFeatureCoverageObjective, self).__init__(*args, **kwargs)
 
     def get_phoneme_vectorizer(self):
         '''
@@ -224,17 +226,18 @@ class PhonemeFeatureCoverageObjective(FeatureCoverageObjective):
         print(phoneme_vectorizer.get_feature_names())
         self._phoneme_vectorizer = phoneme_vectorizer
 
-    def get_word_phoneme_features(self):
+    def get_word_features(self):
         '''
-            Precompute all the word phoneme features (1-gram statistics of
+            Precompute all the word features (ngram statistics basically) for
+            the words from both self.wordlist as well as the words in
+            self.test_wordlist.
+
+            Also precompute all the word phoneme features (1-gram statistics of
             phones from the pronunciation lexicon) for
             the words from words in self.test_wordlist (candidate words from
             another resource). We can't get them from wordlist unless we
             assumed we had a pronunciation lexicon in the target language.
         '''
-        pronun_list = ["".join(pronunciation) for _word, pronunciation in self.test_phoneme_wordlist]
-        print("pronun_list:")
-        print(pronun_list[:10])
         if not self.test_wordlist:
             raise NotImplementedError("""For now we're assuming we only have
             pronunciations for test_wordlist (the candiate words from other
@@ -242,14 +245,55 @@ class PhonemeFeatureCoverageObjective(FeatureCoverageObjective):
             target language but that's not the point for the ACL paper.""")
             wordlist = self.wordlist
 
+        wordlist = self.test_wordlist
+
+        # Pronunciations of the words that are in wordlist
+        pronun_list = ["".join(pronunciation) for _word, pronunciation in self.test_phoneme_wordlist]
+        print(len(wordlist))
+        print(len(pronun_list))
+        assert len(wordlist) == len(pronun_list)
+        print("pronun_list:")
+        print(pronun_list[:10])
+
+        # self.word_features are the features for the words we are selecting
+        # from ('test word features')
+        self.word_features = self._ngram_vectorizer.transform(wordlist) 
+        print("wordlist:")
+        print(wordlist)
+        print("self.word_features:")
+        print(self.word_features)
+        # train_word_features gets us our initial word features.
+        train_word_features = self._ngram_vectorizer.transform(self.wordlist)
+        print("self.train_word_features:")
+        print(train_word_features)
+
         self.word_phoneme_features = self._phoneme_vectorizer.transform(pronun_list) 
         print("self.word_phoneme_features:")
         print(self.word_phoneme_features)
-
-        if self.binarize_counts:
-            self.word_phoneme_features[self.word_phoneme_features > 0 ] = 1.0
-
         # TODO We don't have train_word_features, so we'll have to fake them by
         # taking the phoneme inventory and scaling the frequency appropriately.
-        #self.total_counts = train_word_features.sum(axis=0)
-        #self.p = self.total_counts / float(train_word_features.sum())
+        # Then that train_word_phoneme_features variable will be
+        # appended to train_word_features.
+        # train_word_phoneme_features = <get some scaled uniform features based
+        # on the phoneme inventory of the language>
+
+        # Append the word_phoneme_features to word_features.
+        print("type(self.word_features)")
+        print(type(self.word_features))
+
+        if self.binarize_counts:
+            train_word_features[train_word_features > 0] = 1.0
+            self.word_features[self.word_features > 0 ] = 1.0
+            #self.word_phoneme_features[self.word_phoneme_features > 0 ] = 1.0
+
+        self.total_counts = train_word_features.sum(axis=0)
+        print("len(total_counts):")
+        print(len(self.total_counts))
+        self.p = self.total_counts / float(train_word_features.sum())
+
+        # NOTE I've copy-pasted code a bit here. Above includes stuff from
+        # FeatureObjective.get_word_features(). Below is stuff from
+        # FeatureCoverageObjective.get_word_features().
+        test_word_counts = self.word_features.sum()
+        self.total_counts = (test_word_counts / self.total_counts.sum()) * self.total_counts
+        self.K = test_word_count
