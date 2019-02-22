@@ -245,12 +245,14 @@ class PhonemeFeatureCoverageObjective(FeatureCoverageObjective):
             target language but that's not the point for the ACL paper.""")
             wordlist = self.wordlist
 
-        wordlist = self.test_wordlist
-
+        # wordlist now comes from test_phoneme_wordlist, which comes from the
+        # pronunciation lexicon. This is because there are duplicate words in
+        # that list because of different pronunciations, and there needs to be
+        # a one-to-one correspondence between wordlist and pronun_wordlist.
+        wordlist = [word for word, _pronun in self.test_phoneme_wordlist]
         # Pronunciations of the words that are in wordlist
-        pronun_list = ["".join(pronunciation) for _word, pronunciation in self.test_phoneme_wordlist]
-        print(len(wordlist))
-        print(len(pronun_list))
+        pronun_list = ["".join(pronunciation) for word, pronunciation
+                                              in self.test_phoneme_wordlist]
         assert len(wordlist) == len(pronun_list)
         print("pronun_list:")
         print(pronun_list[:10])
@@ -259,17 +261,25 @@ class PhonemeFeatureCoverageObjective(FeatureCoverageObjective):
         # from ('test word features')
         self.word_features = self._ngram_vectorizer.transform(wordlist) 
         print("wordlist:")
-        print(wordlist)
+        print(wordlist[:10])
         print("self.word_features:")
-        print(self.word_features)
+        print(self.word_features[:10])
+        self.word_phoneme_features = self._phoneme_vectorizer.transform(pronun_list) 
+        print("self.word_phoneme_features:")
+        print(self.word_phoneme_features[:10])
+        # Now append the two sparse matrices.
+        print("Appending")
+        print(self.word_features.shape)
+        print(self.word_phoneme_features.shape)
+        self.word_features = sparse.hstack((self.word_features,
+                                            self.word_phoneme_features))
+        print(self.word_features.shape)
+
+
         # train_word_features gets us our initial word features.
         train_word_features = self._ngram_vectorizer.transform(self.wordlist)
         print("self.train_word_features:")
         print(train_word_features)
-
-        self.word_phoneme_features = self._phoneme_vectorizer.transform(pronun_list) 
-        print("self.word_phoneme_features:")
-        print(self.word_phoneme_features)
         # TODO We don't have train_word_features, so we'll have to fake them by
         # taking the phoneme inventory and scaling the frequency appropriately.
         # Then that train_word_phoneme_features variable will be
