@@ -271,25 +271,77 @@ class PhonemeFeatureCoverageObjective(FeatureCoverageObjective):
         print("Appending")
         print(self.word_features.shape)
         print(self.word_phoneme_features.shape)
+        for word_i, word in enumerate(wordlist[:10]):
+            try:
+                print("Word: " + word)
+                print("\tngram features:")
+                print(self.word_features[word_i,:].toarray().squeeze())
+                for ngram_i, elem in enumerate(self.word_features[word_i,:].toarray().squeeze()):
+                    if elem > 0:
+                        print("\t\t" + self._ngram_vectorizer.get_feature_names()[ngram_i])
+            except UnicodeEncodeError:
+                pass
+            try:
+                print("Pronunciation: " + pronun_list[word_i])
+                print("\tngram features:")
+                print(self.word_phoneme_features[word_i,:].toarray().squeeze())
+                for ngram_i, elem in enumerate(self.word_phoneme_features[word_i,:].toarray().squeeze()):
+                    if elem > 0:
+                        print("\t\t" + self._phoneme_vectorizer.get_feature_names()[ngram_i])
+            except UnicodeEncodeError:
+                pass
         self.word_features = sparse.hstack((self.word_features,
-                                            self.word_phoneme_features))
+                                            self.word_phoneme_features),
+                                           format="csr")
         print(self.word_features.shape)
 
 
         # train_word_features gets us our initial word features.
         train_word_features = self._ngram_vectorizer.transform(self.wordlist)
+        print("ngram features:")
+        print(self._ngram_vectorizer.get_feature_names())
         print("self.train_word_features:")
-        print(train_word_features)
+        print(train_word_features.shape)
         # TODO We don't have train_word_features, so we'll have to fake them by
         # taking the phoneme inventory and scaling the frequency appropriately.
         # Then that train_word_phoneme_features variable will be
         # appended to train_word_features.
         # train_word_phoneme_features = <get some scaled uniform features based
         # on the phoneme inventory of the language>
+        train_word_phoneme_features = self._phoneme_vectorizer.transform(
+                ["".join(self.phoneme_inventory)]*len(self.wordlist))
+        print("train_word_phoneme_features")
+        print("".join(self.phoneme_inventory))
+        print(train_word_phoneme_features.shape)
+        # Now multiply the values of those feature counts so that they are
+        # proportional to the length of the graphemic 'training' utterance.
+        print("ok")
+        print(self.wordlist[:10])
+        print(self.wordlist[0])
+        # TODO perhaps these features should be floating point
+        for i in range(len(self.wordlist)):
+            train_word_phoneme_features[i,:] *= len(self.wordlist[i])/(2*len(self.phoneme_inventory))
 
-        # Append the word_phoneme_features to word_features.
+        print(train_word_phoneme_features[0,:])
+        print(train_word_phoneme_features[2,:]*(len(self.wordlist[2])/len(self.phoneme_inventory)))
+
         print("type(self.word_features)")
         print(type(self.word_features))
+
+        print("total word_features:")
+        print(train_word_features.sum().shape)
+        print(train_word_features.sum())
+
+        print("total word_phoneme_features:")
+        print(train_word_phoneme_features.sum().shape)
+        print(train_word_phoneme_features.sum())
+        # Append the word_phoneme_features to word_features.
+        train_word_features = sparse.hstack((train_word_features,
+                                             train_word_phoneme_features),
+                                            format="csr")
+
+        import sys; sys.exit()
+        
 
         if self.binarize_counts:
             train_word_features[train_word_features > 0] = 1.0
@@ -306,4 +358,4 @@ class PhonemeFeatureCoverageObjective(FeatureCoverageObjective):
         # FeatureCoverageObjective.get_word_features().
         test_word_counts = self.word_features.sum()
         self.total_counts = (test_word_counts / self.total_counts.sum()) * self.total_counts
-        self.K = test_word_count
+        self.K = test_word_counts
