@@ -272,11 +272,9 @@ class PhonemeFeatureCoverageObjective(FeatureCoverageObjective):
         # fake features for each 'training' word.
         train_word_phoneme_features = self._phoneme_vectorizer.transform(
                 [" ".join(self.phoneme_inventory)]*len(self.wordlist))
-        # Now multiply the values of those feature counts so that they are
-        # proportional to the length of the graphemic 'training' utterance.
-        for i in range(len(self.wordlist)):
-            #print(self.wordlist[i])
-            train_word_phoneme_features[i,:] *= (len(self.wordlist[i]))
+
+        print("train_word_phoneme_features")
+        print(train_word_phoneme_features)
 
         # NOTE I was scaling the phoneme features down, but it doesn't make a
         # difference if we're binarizing them anyway.
@@ -285,7 +283,14 @@ class PhonemeFeatureCoverageObjective(FeatureCoverageObjective):
         # --append-ngrams false, because there were less character n-grams and
         # phoneme coverage was weighted too heavily. (only 4-grams are
         # used for graphemes with --append-ngrams false),
-        # NOTE uncomment below line in future if this is to be done again.
+        # NOTE uncomment below lines in future if this is to be done again.
+
+        # Multiply the values of those feature counts so that they are
+        # proportional to the length of the graphemic 'training' utterance.
+        #for i in range(len(self.wordlist)):
+        #    train_word_phoneme_features[i,:] *= (len(self.wordlist[i]))
+        # Then divide by the orthographic scaling factor and the length of the
+        # phoneme inventory.
         # train_word_phoneme_features = train_word_phoneme_features / (self.ortho_scaling*len(self.phoneme_inventory))
 
         # Append the word_phoneme_features to word_features.
