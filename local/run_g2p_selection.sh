@@ -27,7 +27,7 @@ select_words= # Word list from which to select in order to train g2p
 select_lexicon= # Words and assosiated pronunciation from which we will select
 phoneme_features= # Use phoneme features in selection of words. true/false
 target_phoneme_inventory= # Path to the phoneme inventory of the target language.
-ortho_scaling=2
+ortho_scaling=
 
 . ./utils/parse_options.sh
 if [ $# -eq 0 ]; then
@@ -82,6 +82,8 @@ if [ ! -z $select_words ]; then
   if [[ $objective == "PhonemeFeatureCoverage" ]]; then
     extra_opts="$extra_opts --test-lexicon $ref_lex"
     extra_opts="$extra_opts --target-phoneme-inventory $target_phoneme_inventory"
+  fi
+  if [[ $ortho_scaling ]]; then
     extra_opts="$extra_opts --ortho-scaling $ortho_scaling"
   fi
 fi
