@@ -9,7 +9,6 @@ from G2PSelection import BatchActiveSubset, RandomSubset
 from SubmodularObjective import FeatureObjective, FeatureCoverageObjective
 from SubmodularObjective import PhonemeFeatureCoverageObjective
 
-
 def parse_input():
     parser = argparse.ArgumentParser()
     parser.add_argument("output",
@@ -60,6 +59,15 @@ def parse_input():
         help="Path with a list of words (with pronunciations) from which to select",
         type=str,
         default=None,
+        action="store")
+    parser.add_argument("--target-phoneme-inventory",
+        help="Path to the phone inventory of the target language; used to guide which phoneme features in candidate words are more useful. One phone per line",
+        default=None,
+        action="store")
+    parser.add_argument("--ortho-scaling",
+        help="How much more important orthographic similarity is versus covering target language phonemes",
+        default=None,
+        type=int,
         action="store")
 
 
@@ -126,6 +134,10 @@ def main():
         test_words = words 
 
     if args.objective == "PhonemeFeatureCoverage":
+        # For the purposes of the ACL paper, we absolutely need a test_lexicion
+        # to derive our pronunciations. (Conceivably in the future you might
+        # use phoneme features monolingually, so this requirement need not be
+        # hard.)
         assert args.test_lexicon
         test_lexicon = []
         with codecs.open(args.test_lexicon, "r", encoding="utf-8") as f:
@@ -133,12 +145,24 @@ def main():
                 word, pronunciation = l.split("\t")
                 test_lexicon.append((word, pronunciation.split()))
 
-    if args.objective == "PhonemeFeatureCoverage":
+        # Now get the reference phoneme inventory.
+        # TODO This shouldn't be hardcoded, but should be a command line arg.
+        #root="/export/b09/mwiesner/LORELEI/tasks/uam/asr1/data/"
+        #langcode="201"
+        #phones="/data/dict_universal/nonsilence_phones.txt"
+        #phone_inv_path = root + langcode + phones
+        phone_inv_path = args.target_phoneme_inventory
+        with open(phone_inv_path) as f:
+            phoneme_inventory = [line.strip() for line in f]
+        print(phoneme_inventory)
+
         # The submodular objective
         fobj = objectives[args.objective](
             words,
             test_wordlist=test_words,
+            phoneme_inventory=phoneme_inventory,
             phoneme_wordlist=test_lexicon, #TODO naming incongruence
+            ortho_scaling=args.ortho_scaling,
             n_order=args.n_order,
             append_ngrams=args.append_ngrams,
             binarize_counts=args.binarize_counts
@@ -151,7 +175,6 @@ def main():
             n_order=args.n_order,
             append_ngrams=args.append_ngrams,
             binarize_counts=args.binarize_counts,
-            phoneme_words=phoneme_words,
         )
          
     # The selection method

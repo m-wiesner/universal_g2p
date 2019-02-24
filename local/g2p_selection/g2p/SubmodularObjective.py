@@ -46,7 +46,9 @@ class FeatureObjective(object):
     '''
     def __init__(self, wordlist, test_wordlist=None, n_order=4,
                 append_ngrams=True, binarize_counts=False,
-                g=np.sqrt, vectorizer='count', phoneme_wordlist=None): # TODO phoneme_wordlist shouldn't be here but it needed the consistent interface with PhonemeFeatureCoverageObjective.
+                g=np.sqrt, vectorizer='count',
+                phoneme_inventory=None, phoneme_wordlist=None,
+                ortho_scaling=2): # TODO phoneme_inventory, phoneme_wordlist, and ortho_scaling shouldn't be here but it needed the consistent interface with PhonemeFeatureCoverageObjective.
 
         self.wordlist = wordlist
         
@@ -194,9 +196,10 @@ class PhonemeFeatureCoverageObjective(FeatureCoverageObjective):
     features. """
     def __init__(self, *args, **kwargs):
         self.phoneme_vectorizer = CountVectorizer
-        #self.phoneme_inventory = kwargs["phoneme_inventory"]
-        self.phoneme_inventory = ["a", "n"] #TODO replace with commented line above
+        self.phoneme_inventory = kwargs["phoneme_inventory"]
         self.test_phoneme_wordlist = kwargs["phoneme_wordlist"]
+        self.ortho_scaling = kwargs["ortho_scaling"] #How much more important orthographic features are over phonemic features.
+        print("Ortho scaling:", self.ortho_scaling)
         self.get_phoneme_vectorizer()
         super(PhonemeFeatureCoverageObjective, self).__init__(*args, **kwargs)
 
@@ -209,12 +212,14 @@ class PhonemeFeatureCoverageObjective(FeatureCoverageObjective):
         '''
         # We use phoneme uni-grams because we don't know any thing about
         # potential higher order n-grams; only what the phoneme inventory is.
-        phoneme_vectorizer = self.phoneme_vectorizer(analyzer="char_wb",
+        # Our analyzer just returns space separated tokens split, because the
+        # 'word' analyzer is broken and disgregards length 1 tokens.
+        self._phoneme_vectorizer = self.phoneme_vectorizer(analyzer=lambda x: x.split(),
                                     encoding="utf-8",
-                                    strip_accents='unicode',
+                                    strip_accents=None,
+                                    lowercase=False,
                                     ngram_range=(1,1))
-        phoneme_vectorizer.fit(self.phoneme_inventory)
-        self._phoneme_vectorizer = phoneme_vectorizer
+        self._phoneme_vectorizer.fit([" ".join(self.phoneme_inventory)])
 
     def get_word_features(self):
         '''
@@ -241,7 +246,7 @@ class PhonemeFeatureCoverageObjective(FeatureCoverageObjective):
         # a one-to-one correspondence between wordlist and pronun_wordlist.
         wordlist = [word for word, _pronun in self.test_phoneme_wordlist]
         # Pronunciations of the words that are in wordlist
-        pronun_list = ["".join(pronunciation) for word, pronunciation
+        pronun_list = [" ".join(pronunciation) for word, pronunciation
                                               in self.test_phoneme_wordlist]
         assert len(wordlist) == len(pronun_list)
 
@@ -249,33 +254,60 @@ class PhonemeFeatureCoverageObjective(FeatureCoverageObjective):
         # from ('test word features')
         self.word_features = self._ngram_vectorizer.transform(wordlist) 
         self.word_phoneme_features = self._phoneme_vectorizer.transform(pronun_list) 
+
+        print(self._phoneme_vectorizer.get_feature_names())
+
+        print("self.word_phoneme_features")
+        print(self._phoneme_vectorizer.transform(["E N O O~"]))
+        #print(self._phoneme_vectorizer.transform(["ENOO~"]))
+        #print(self._phoneme_vectorizer.transform(["E"]))
+        #print(self._phoneme_vectorizer.transform("E N O O~"))
+        #print(self._phoneme_vectorizer.transform("ENOO~"))
+        #print(self._phoneme_vectorizer.transform("E"))
+        #print(self.word_phoneme_features)
+        for i in range(0,3):
+            print(wordlist[i])
+            print(pronun_list[i])
+            print(self.word_phoneme_features[i,:])
         # Now append the two sparse matrices.
         self.word_features = sparse.hstack((self.word_features,
                                             self.word_phoneme_features),
                                            format="csr")
 
-
         # train_word_features gets us our initial word features.
         train_word_features = self._ngram_vectorizer.transform(self.wordlist)
 
-        # We don't have train_word_features, so we'll have to fake them by
-        # taking the phoneme inventory and scaling the frequency appropriately.
-        # Then that train_word_phoneme_features variable will be
-        # appended to train_word_features.
+        # We don't have train_word_features for pronunciations, so we'll have
+        # to fake them by taking the phoneme inventory and scaling the
+        # frequency appropriately.  Then that train_word_phoneme_features
+        # variable will be appended to train_word_features.
 
         # So first, we just take our whole phoneme inventory and make those
         # fake features for each 'training' word.
         train_word_phoneme_features = self._phoneme_vectorizer.transform(
-                ["".join(self.phoneme_inventory)]*len(self.wordlist))
+                [" ".join(self.phoneme_inventory)]*len(self.wordlist))
+        print("phoneme vectorizer feature names.")
+        print(self._phoneme_vectorizer.get_feature_names())
+        print("train word phoneme features")
+        print(train_word_phoneme_features)
         # Now multiply the values of those feature counts so that they are
         # proportional to the length of the graphemic 'training' utterance.
         # TODO Scaling factors here are important it seems. I threw a 2 in the
         # denominator to bias against phoneme inventory when using
         # --append-ngrams false (ie. when only 4-grams are used for graphemes,
         # phonemes become more important).
+        #train_word_phoneme_features = np.float_(train_word_phoneme_features)
         for i in range(len(self.wordlist)):
-            train_word_phoneme_features[i,:] *= (
-                    len(self.wordlist[i])/(2*len(self.phoneme_inventory)))
+            #print(self.wordlist[i])
+            train_word_phoneme_features[i,:] *= (len(self.wordlist[i]))
+
+        print("train word phoneme features")
+        print(train_word_phoneme_features)
+        # NOTE I was scaling the phoneme features down, but it doesn't make a
+        # difference if we're binarizing them anyway.
+        #train_word_phoneme_features = train_word_phoneme_features / (self.ortho_scaling*len(self.phoneme_inventory))
+        print("train word phoneme features")
+        print(train_word_phoneme_features)
 
         # Append the word_phoneme_features to word_features.
         train_word_features = sparse.hstack((train_word_features,
@@ -285,7 +317,9 @@ class PhonemeFeatureCoverageObjective(FeatureCoverageObjective):
         if self.binarize_counts:
             train_word_features[train_word_features > 0] = 1.0
             self.word_features[self.word_features > 0 ] = 1.0
-            #self.word_phoneme_features[self.word_phoneme_features > 0 ] = 1.0
+
+        print("train_word_features")
+        print(train_word_features)
 
         self.total_counts = train_word_features.sum(axis=0)
         self.p = self.total_counts / float(train_word_features.sum())

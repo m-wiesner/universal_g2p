@@ -25,7 +25,9 @@ test_words= # Words whose pronunciation we will derive from g2p
 test_ref_lexicon= # The reference lexicon corresponding to the test_words
 select_words= # Word list from which to select in order to train g2p 
 select_lexicon= # Words and assosiated pronunciation from which we will select
-phoneme_features= # Use phoneme features in selection of words.
+phoneme_features= # Use phoneme features in selection of words. true/false
+target_phoneme_inventory= # Path to the phoneme inventory of the target language.
+ortho_scaling=2
 
 . ./utils/parse_options.sh
 if [ $# -eq 0 ]; then
@@ -79,6 +81,8 @@ if [ ! -z $select_words ]; then
   extra_opts="$extra_opts --test-wordlist $select_words"
   if [[ $objective == "PhonemeFeatureCoverage" ]]; then
     extra_opts="$extra_opts --test-lexicon $ref_lex"
+    extra_opts="$extra_opts --target-phoneme-inventory $target_phoneme_inventory"
+    extra_opts="$extra_opts --ortho-scaling $ortho_scaling"
   fi
 fi
 
@@ -87,7 +91,7 @@ fi
   "selection is deterministic, requiring a single run. Setting num_trials=1" \
   && num_trials=1
 
-# Remove all intervals > budget and append budget to interavls
+# Remove all intervals > budget and append budget to intervals
 new_intervals=""
 for i in ${intervals}; do
   if [ $i -lt $budget ]; then
