@@ -255,20 +255,6 @@ class PhonemeFeatureCoverageObjective(FeatureCoverageObjective):
         self.word_features = self._ngram_vectorizer.transform(wordlist) 
         self.word_phoneme_features = self._phoneme_vectorizer.transform(pronun_list) 
 
-        print(self._phoneme_vectorizer.get_feature_names())
-
-        print("self.word_phoneme_features")
-        print(self._phoneme_vectorizer.transform(["E N O O~"]))
-        #print(self._phoneme_vectorizer.transform(["ENOO~"]))
-        #print(self._phoneme_vectorizer.transform(["E"]))
-        #print(self._phoneme_vectorizer.transform("E N O O~"))
-        #print(self._phoneme_vectorizer.transform("ENOO~"))
-        #print(self._phoneme_vectorizer.transform("E"))
-        #print(self.word_phoneme_features)
-        for i in range(0,3):
-            print(wordlist[i])
-            print(pronun_list[i])
-            print(self.word_phoneme_features[i,:])
         # Now append the two sparse matrices.
         self.word_features = sparse.hstack((self.word_features,
                                             self.word_phoneme_features),
@@ -286,28 +272,21 @@ class PhonemeFeatureCoverageObjective(FeatureCoverageObjective):
         # fake features for each 'training' word.
         train_word_phoneme_features = self._phoneme_vectorizer.transform(
                 [" ".join(self.phoneme_inventory)]*len(self.wordlist))
-        print("phoneme vectorizer feature names.")
-        print(self._phoneme_vectorizer.get_feature_names())
-        print("train word phoneme features")
-        print(train_word_phoneme_features)
         # Now multiply the values of those feature counts so that they are
         # proportional to the length of the graphemic 'training' utterance.
-        # TODO Scaling factors here are important it seems. I threw a 2 in the
-        # denominator to bias against phoneme inventory when using
-        # --append-ngrams false (ie. when only 4-grams are used for graphemes,
-        # phonemes become more important).
-        #train_word_phoneme_features = np.float_(train_word_phoneme_features)
         for i in range(len(self.wordlist)):
             #print(self.wordlist[i])
             train_word_phoneme_features[i,:] *= (len(self.wordlist[i]))
 
-        print("train word phoneme features")
-        print(train_word_phoneme_features)
         # NOTE I was scaling the phoneme features down, but it doesn't make a
         # difference if we're binarizing them anyway.
-        #train_word_phoneme_features = train_word_phoneme_features / (self.ortho_scaling*len(self.phoneme_inventory))
-        print("train word phoneme features")
-        print(train_word_phoneme_features)
+
+        # The motivation for scaling down phoneme features was to bias against phoneme inventory when using
+        # --append-ngrams false, because there were less character n-grams and
+        # phoneme coverage was weighted too heavily. (only 4-grams are
+        # used for graphemes with --append-ngrams false),
+        # NOTE uncomment below line in future if this is to be done again.
+        # train_word_phoneme_features = train_word_phoneme_features / (self.ortho_scaling*len(self.phoneme_inventory))
 
         # Append the word_phoneme_features to word_features.
         train_word_features = sparse.hstack((train_word_features,
@@ -318,15 +297,9 @@ class PhonemeFeatureCoverageObjective(FeatureCoverageObjective):
             train_word_features[train_word_features > 0] = 1.0
             self.word_features[self.word_features > 0 ] = 1.0
 
-        print("train_word_features")
-        print(train_word_features)
-
         self.total_counts = train_word_features.sum(axis=0)
         self.p = self.total_counts / float(train_word_features.sum())
 
-        # NOTE I've copy-pasted code a bit here. Above includes stuff from
-        # FeatureObjective.get_word_features(). Below is stuff from
-        # FeatureCoverageObjective.get_word_features().
         test_word_counts = self.word_features.sum()
         self.total_counts = (test_word_counts / self.total_counts.sum()) * self.total_counts
         self.K = test_word_counts

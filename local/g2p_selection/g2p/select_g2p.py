@@ -139,6 +139,8 @@ def main():
         # use phoneme features monolingually, so this requirement need not be
         # hard.)
         assert args.test_lexicon
+        if args.ortho_scaling:
+            raise NotImplementedError("Ortho scaling disabled.")
         test_lexicon = []
         with codecs.open(args.test_lexicon, "r", encoding="utf-8") as f:
             for l in f:
@@ -146,11 +148,6 @@ def main():
                 test_lexicon.append((word, pronunciation.split()))
 
         # Now get the reference phoneme inventory.
-        # TODO This shouldn't be hardcoded, but should be a command line arg.
-        #root="/export/b09/mwiesner/LORELEI/tasks/uam/asr1/data/"
-        #langcode="201"
-        #phones="/data/dict_universal/nonsilence_phones.txt"
-        #phone_inv_path = root + langcode + phones
         phone_inv_path = args.target_phoneme_inventory
         with open(phone_inv_path) as f:
             phoneme_inventory = [line.strip() for line in f]
@@ -161,7 +158,7 @@ def main():
             words,
             test_wordlist=test_words,
             phoneme_inventory=phoneme_inventory,
-            phoneme_wordlist=test_lexicon, #TODO naming incongruence
+            phoneme_wordlist=test_lexicon, #TODO Fix naming incongruence
             ortho_scaling=args.ortho_scaling,
             n_order=args.n_order,
             append_ngrams=args.append_ngrams,
