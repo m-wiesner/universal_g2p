@@ -45,12 +45,14 @@ echo "output: $output"
 echo "------------------------"
 
 echo "$0: Producing graphemic forms for pronunciations..."
-$cmd JOB=1:$nj $output/log/g2p.JOB.log \  utils/split_scp.pl -j $nj \$\[JOB -1\] $oovlist \|\
-  utils/split_scp.pl -j $nj \$\[JOB -1\] $oovlist \|\
-  cut -f 1  \|\
-  phonetisaurus-g2pfst \
-    --model=$g2p/g2p.fst\
-    --wordlist=/dev/stdin \
-    --nbest=$nbest \> $output/lexicon_out.JOB \|\| true
+#$cmd JOB=1:$nj $output/log/g2p.JOB.log \  utils/split_scp.pl -j $nj \$\[JOB -1\] $oovlist \|\
+#  utils/split_scp.pl -j $nj \$\[JOB -1\] $oovlist \|\
+#  cut -f 1  \|\
+#  phonetisaurus-g2pfst \
+#    --model=$g2p/g2p.fst\
+#    --wordlist=/dev/stdin \
+#    --nbest=$nbest \> $output/lexicon_out.JOB \|\| true
+
+phonetisaurus-g2pfst --model=$g2p/g2p.fst --wordlist=$oovlist --nbest=$nbest > $output/lexicon_out.1
 
 exit 0

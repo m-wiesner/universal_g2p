@@ -15,6 +15,7 @@ append_ngrams=true # Use all order < n, n-grams as features in addition to all o
 binarize_counts=true # For BatchActive selection, a single feature is not counted twice within a single word
 intervals="100 200 400 800 1600 3200 6400 12800 20000 25600 36000 50000" # Selection intervals
 score=true # To score or not score
+optimal_only=false
 
 ###############################################################################
 # The below options are more useful for the Universal G2P Experiments
@@ -23,11 +24,14 @@ score=true # To score or not score
 test_words= # Words whose pronunciation we will derive from g2p
 test_ref_lexicon= # The reference lexicon corresponding to the test_words
 select_words= # Word list from which to select in order to train g2p 
-select_lexicon= # Words an assosiated pronunciation from which we will select
+select_lexicon= # Words and assosiated pronunciation from which we will select
+phoneme_features= # Use phoneme features in selection of words. true/false
+target_phoneme_inventory= # Path to the phoneme inventory of the target language.
+ortho_scaling=
 
 . ./utils/parse_options.sh
 if [ $# -eq 0 ]; then
-  echo "Usage: ./local/run_g2p_rand_select.sh [opts] <odir> <words> <lexicon> <budget>"
+  echo "Usage: ./local/run_g2p_selection.sh [opts] <odir> <words> <lexicon> <budget>"
   echo "    [opts] --n-order : max n-gram order for bow features"
   echo "           --num_trials : number of random trials to perform"
   echo "           --constraint : the type of budget constraint ['card', 'freq', 'len', 'rootlen']" 
@@ -75,6 +79,13 @@ if $binarize_counts; then
 fi
 if [ ! -z $select_words ]; then
   extra_opts="$extra_opts --test-wordlist $select_words"
+  if [[ $objective == "PhonemeFeatureCoverage" ]]; then
+    extra_opts="$extra_opts --test-lexicon $ref_lex"
+    extra_opts="$extra_opts --target-phoneme-inventory $target_phoneme_inventory"
+  fi
+  if [[ $ortho_scaling ]]; then
+    extra_opts="$extra_opts --ortho-scaling $ortho_scaling"
+  fi
 fi
 
 # Check $num_trials
@@ -82,7 +93,7 @@ fi
   "selection is deterministic, requiring a single run. Setting num_trials=1" \
   && num_trials=1
 
-# Remove all intervals > budget and append budget to interavls
+# Remove all intervals > budget and append budget to intervals
 new_intervals=""
 for i in ${intervals}; do
   if [ $i -lt $budget ]; then
@@ -112,17 +123,25 @@ echo "---------------------------------"
 ###############################################################################
 # Run this first 
 if [ $stage -le 1 ]; then
-  $cmd ITER=1:$num_trials $owords/log/run.ITER.log \
+    select_g2p_cmd="$cmd ITER=1:$num_trials $owords/log/run.ITER.log \
     python local/g2p_selection/g2p/select_g2p.py --n-order $n_order \
                                    --constraint $constraint \
                                    --subset-method $method \
                                    --objective $objective \
                                    $extra_opts \
-                                   $owords/trial.ITER/words.txt $words $budget || exit 1;
+                                   $owords/trial.ITER/words.txt $words $budget || exit 1"
+    echo $select_g2p_cmd
+    $select_g2p_cmd
+
+    exit
 fi
 ###############################################################################
 #  Get pronunciations for all words in each g2p selection produced in stage=1
 ###############################################################################
+if [[ $method = "BatchActive" ]] && $optimal_only; then
+  intervals=`cat ${owords}/trial.1/words.kl_div.txt | wc -l` 
+fi
+
 if [ $stage -le 2 ]; then
   # Next run the following
   for num in ${intervals[@]}; do
@@ -141,6 +160,9 @@ if [ $stage -le 2 ]; then
     run.pl ITER=1:$num_trials $num_dir/trial.ITER/log/lexicon_retrieve.log \
       python ./local/translit_oov_letters.py $test_words ${num_dir}/trial.ITER/lexicon.orig.transform.tmp \> ${num_dir}/trial.ITER/lexicon.orig.transform
 
+    for d in ${num_dir}/trial.*; do
+      echo ${num} > ${d}/budget
+    done
   done
 fi
 
@@ -170,7 +192,7 @@ if [ $stage -le 3 ]; then
     rm -r ${odir}/g2p
   fi
   
-  ./local/g2p_selection/run_all_budgets.sh --cmd "queue.pl" --ref-lex $test_ref_lexicon \
+  ./local/g2p_selection/run_all_budgets.sh --cmd ${cmd} --ref-lex $test_ref_lexicon \
                              --words $test_words --score $score $odir
 
   # The --words option is to specify which set of tested words should be scored
@@ -178,8 +200,17 @@ if [ $stage -le 3 ]; then
   # to specify which set of experiments should be scored we use the --words opt
   if $score; then
     ./local/g2p_selection/run_average_ser.sh ${extra_scoring_opts} --words $test_words_name $odir
+    
+    # I use this for plotting random trials only. Safe to ignore for now
+    find ${odir} -type d -name "budget_*" | awk -F'_' '{print $NF}' |\
+      sort -n > ${odir}/trial_results.txt
+    
+    for i in `seq 1 ${num_trials}`; do
+      grep "/trial\.${i}/" ${odir}/budget_*/symb_er.txt |\
+        sort -t'_' -n -k4,4 |\
+        paste -d' ' ${odir}/trial_results.txt <(cut -d' ' -f2-) > ${odir}/trial_results.tmp
+      mv ${odir}/trial_results.tmp ${odir}/trial_results.txt; done 
   fi
 fi
-
 
 exit 0;

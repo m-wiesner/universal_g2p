@@ -4,6 +4,7 @@
 
 nbest=1
 score=true
+phon2phon=$PHON2PHON_PATH #/export/b13/mwiesner/JSALT_07_25_2018/espnet/tools/kaldi_github/egs/universal_g2p/phon2phon/ipa.bitdist.table
 
 . ./utils/parse_options.sh
 
@@ -48,12 +49,11 @@ python ./local/translit_oov_letters.py $trial/lexicon.orig.transform ${trial}/${
 # Get lexicon
 cat ${trial}/g2p/${words_name}/*_out.* |\
   tee ${trial}/g2p/${words_name}/lexiconp.txt | cut -f1,3 |\
-  tee ${trial}/g2p/${words_name}/lexiconp.txt |\
   paste <(cut -f2- ${trial}/${words_name}.test.transform.map) <(cut -f2- -) \
   > ${trial}/g2p/${words_name}/lexicon.txt 
 
 # Score
 if $score; then
-  python local/g2p_selection/score_g2p.py $ref_lex ${trial}/g2p/${words_name}/lexicon.txt 2>&1 |\
+  python local/g2p_selection/compute_per.py --phon2phon ${phon2phon} ${trial}/g2p/${words_name}/lexicon.txt ${ref_lex} 2>&1 |\
     tee ${trial}/g2p/${words_name}/score.txt
 fi

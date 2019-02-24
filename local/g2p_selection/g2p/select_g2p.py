@@ -7,7 +7,7 @@ import os
 import json
 from G2PSelection import BatchActiveSubset, RandomSubset
 from SubmodularObjective import FeatureObjective, FeatureCoverageObjective
-
+from SubmodularObjective import PhonemeFeatureCoverageObjective
 
 def parse_input():
     parser = argparse.ArgumentParser()
@@ -37,7 +37,7 @@ def parse_input():
         action="store")
     parser.add_argument("--objective",
         help="The submodular objective used",
-        choices=['Feature', 'FeatureCoverage'],
+        choices=['Feature', 'FeatureCoverage', 'PhonemeFeatureCoverage'],
         default="FeatureCoverage",
         action="store")
     parser.add_argument("--cost-select",
@@ -49,10 +49,25 @@ def parse_input():
     parser.add_argument("--binarize-counts",
         help="Counts are 0 or 1",
         action="store_true")
+    # TODO the naming of "test*" should change to select.
     parser.add_argument("--test-wordlist",
         help="Path with a list of words from which to select",
         type=str,
         default=None,
+        action="store")
+    parser.add_argument("--test-lexicon",
+        help="Path with a list of words (with pronunciations) from which to select",
+        type=str,
+        default=None,
+        action="store")
+    parser.add_argument("--target-phoneme-inventory",
+        help="Path to the phone inventory of the target language; used to guide which phoneme features in candidate words are more useful. One phone per line",
+        default=None,
+        action="store")
+    parser.add_argument("--ortho-scaling",
+        help="How much more important orthographic similarity is versus covering target language phonemes",
+        default=None,
+        type=int,
         action="store")
 
 
@@ -106,6 +121,7 @@ def main():
     objectives = {
                     'Feature': FeatureObjective,
                     'FeatureCoverage': FeatureCoverageObjective,
+                    'PhonemeFeatureCoverage': PhonemeFeatureCoverageObjective,
                  }
 
     
@@ -117,19 +133,48 @@ def main():
     else:
         test_words = words 
 
+    if args.objective == "PhonemeFeatureCoverage":
+        # For the purposes of the ACL paper, we absolutely need a test_lexicion
+        # to derive our pronunciations. (Conceivably in the future you might
+        # use phoneme features monolingually, so this requirement need not be
+        # hard.)
+        assert args.test_lexicon
+        if args.ortho_scaling:
+            raise NotImplementedError("Ortho scaling disabled.")
+        test_lexicon = []
+        with codecs.open(args.test_lexicon, "r", encoding="utf-8") as f:
+            for l in f:
+                word, pronunciation = l.split("\t")
+                test_lexicon.append((word, pronunciation.split()))
 
-    fobj = objectives[args.objective](
-        words,
-        test_wordlist=test_words,
-        n_order=args.n_order,
-        append_ngrams=args.append_ngrams,
-        binarize_counts=args.binarize_counts
-    )
-    
-    # Store experiment configurations
-    #with codecs.open(args.output + ".conf", "w", encoding="utf-8") as f:
-    #    json.dump(args, f, indent=4)
-     
+        # Now get the reference phoneme inventory.
+        phone_inv_path = args.target_phoneme_inventory
+        with open(phone_inv_path) as f:
+            phoneme_inventory = [line.strip() for line in f]
+        print(phoneme_inventory)
+
+        # The submodular objective
+        fobj = objectives[args.objective](
+            words,
+            test_wordlist=test_words,
+            phoneme_inventory=phoneme_inventory,
+            phoneme_wordlist=test_lexicon, #TODO Fix naming incongruence
+            ortho_scaling=args.ortho_scaling,
+            n_order=args.n_order,
+            append_ngrams=args.append_ngrams,
+            binarize_counts=args.binarize_counts
+        )
+    else:
+        # The submodular objective
+        fobj = objectives[args.objective](
+            words,
+            test_wordlist=test_words,
+            n_order=args.n_order,
+            append_ngrams=args.append_ngrams,
+            binarize_counts=args.binarize_counts,
+        )
+         
+    # The selection method
     bas = methods[args.subset_method](
         fobj,
         args.budget,
@@ -141,14 +186,27 @@ def main():
     print("Begin Selection ...")
     selected_words = bas.run_lazy()
     
+    # Create output directory if necessary
     if os.path.dirname(args.output) not in ('', '.'):
         if not os.path.exists(os.path.dirname(args.output)):
             os.makedirs(os.path.dirname(args.output))
     
+    oname, oext = os.path.splitext(args.output)
+
+    # Store experiment configurations
+    #with codecs.open(oname + ".conf", "w", encoding="utf-8") as f:
+    #    json.dump(args, f, indent=4)
+
+    # Return the words in the order selected up to the specified budget
     with codecs.open(args.output, "w", encoding="utf-8") as f:
         for w in selected_words:
             print(w, file=f) 
-  
+   
+    # Returns "optimal" subset according to KL-divergence 
+    if args.subset_method == 'BatchActive':
+        with codecs.open(oname + '.kl_div' + oext, "w", encoding="utf-8") as f:
+            for w in selected_words[0: np.argmin(bas.KL) + 1]:
+                print(w, file=f) 
      
 if __name__ == "__main__":
     main() 

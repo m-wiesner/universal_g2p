@@ -34,7 +34,7 @@ class BatchActiveSubset(object):
         self.test_wordlist = wordlist
         self.cost = cost
         self.cost_select = cost_select 
-    
+        self.KL = [] 
  
     def run_lazy(self):
         S = []
@@ -70,17 +70,17 @@ class BatchActiveSubset(object):
 
             if (gain >= -max_val):
                 S.append(idx)
-                #self.objective.set_subset(S)
                 self.objective.add_to_subset(idx)
                 total_cost += self.cost(self.test_wordlist[idx])
                 set_value = new_set_value
-
+                self.KL.append(self.objective.compute_kl())
+                remaining_budget = self.budget - total_cost
+                
+                # Print some things for logging
                 print(self.test_wordlist[idx].encode('utf-8'), "Consumed: ", total_cost, "/", self.budget,
                     ":  +", self.cost(self.test_wordlist[idx]), end=" : ")
                 print("Set value: ", set_value, end=" : ")
                 print("Gain: ", gain, end=" : ")
- 
-                remaining_budget = self.budget - total_cost
                 print("Remaining Candidates: ", upper_bounds.qsize())
 
             else:
@@ -94,7 +94,6 @@ class RandomSubset(object):
         self.budget = budget
         self.test_wordlist = wordlist
         self.cost = cost
-    
     
     def run(self):
         ranked_words = []

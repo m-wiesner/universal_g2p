@@ -40,7 +40,6 @@ mkdir -p ${dir}/g2p/log
 
 for i in `seq 1 $num_trials`; do
   trial=`readlink -f ${trials[$(($i-1))]}`
-  echo $trial 
   cd ${dir}/g2p
   if [ ! -L trial.$i ] || [ ! -e trial.$i ]; then
     if [ -L trial.$i ]; then
@@ -53,5 +52,7 @@ done
 
 $cmd ITER=1:${num_trials} ${dir}/g2p/log/run.ITER.log \
   ./local/g2p_selection/run_single_g2p.sh --nbest $nbest --score $score ${dir}/g2p/trial.ITER $words $ref_lex || exit 1
-
+#for ITER in `seq 1 ${num_trials}`; do
+#  echo "Iter: ${ITER}"
+#done
 exit 0
